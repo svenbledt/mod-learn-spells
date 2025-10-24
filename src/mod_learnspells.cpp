@@ -4,25 +4,35 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
+#include "SpellMgr.h"
 
 class LearnSpellsOnLevelUp : public PlayerScript
 {
 public:
-    LearnSpellsOnLevelUp() : PlayerScript("LearnSpellsOnLevelUp") { }
+    LearnSpellsOnLevelUp() : PlayerScript("LearnSpellsOnLevelUp", {
+        PLAYERHOOK_ON_FIRST_LOGIN,
+        PLAYERHOOK_ON_LEVEL_CHANGED
+    }) { }
 
-    void OnFirstLogin(Player* player) override
+    void OnPlayerFirstLogin(Player* player) override
     {
         if (sConfigMgr->GetOption<bool>("LearnSpells.OnFirstLogin", 0))
-        {
             LearnSpellsForNewLevel(player, 1);
+
+        if (player->getClass() == CLASS_SHAMAN)
+        {
+            player->AddItem(5175, 1); // Earth Totem
+            player->AddItem(5176, 1); // Fire Totem
+            player->AddItem(5177, 1); // Water Totem
+            player->AddItem(5178, 1); // Air Totem
         }
     }
 
-    void OnLevelChanged(Player* player, uint8 oldLevel) override
+    void OnPlayerLevelChanged(Player* player, uint8 oldLevel) override
     {
         if (sConfigMgr->GetOption<bool>("LearnSpells.Enable", true))
         {
-            if (player->getLevel() <= sConfigMgr->GetOption<uint8>("LearnSpells.MaxLevel", 80) && oldLevel < player->getLevel())
+            if (player->GetLevel() <= sConfigMgr->GetOption<uint8>("LearnSpells.MaxLevel", 80) && oldLevel < player->GetLevel())
                 LearnSpellsForNewLevel(player, oldLevel);
         }
     }
@@ -395,7 +405,7 @@ private:
 
     void LearnSpellsForNewLevel(Player* player, uint8 fromLevel)
     {
-        uint8 upToLevel = player->getLevel();
+        uint8 upToLevel = player->GetLevel();
         uint32 family = GetSpellFamily(player);
 
         for (int level = fromLevel; level <= upToLevel; level++)
@@ -472,9 +482,7 @@ private:
                 for (auto const& spell : additionalSpellsToTeach)
                 {
                     if (!(player->HasSpell(spell.spellId)) && (spell.faction == TeamId::TEAM_NEUTRAL || spell.faction == player->GetTeamId()))
-                    {
                         player->learnSpell(spell.spellId);
-                    }
                 }
             }
         }
